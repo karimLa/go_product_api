@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/karimLa/microservices/handlers"
 )
 
@@ -15,8 +16,18 @@ func main() {
 	l := log.New(os.Stdout, "product-api ", log.LstdFlags)
 	ph := handlers.NewProduct(l)
 
-	sm := http.NewServeMux()
-	sm.Handle("/", ph)
+	sm := mux.NewRouter()
+
+	getRouter := sm.Methods(http.MethodGet).Subrouter()
+	getRouter.HandleFunc("/", ph.GetProducts)
+
+	putRouter := sm.Methods(http.MethodPut).Subrouter()
+	putRouter.Use(ph.MiddlewareValidateProduct)
+	putRouter.HandleFunc("/{id:[0-9]+}", ph.UpdateProduct)
+
+	postRouter := sm.Methods(http.MethodPost).Subrouter()
+	postRouter.Use(ph.MiddlewareValidateProduct)
+	postRouter.HandleFunc("/", ph.AddProduct)
 
 	s := &http.Server{
 		Addr:         ":9090",
